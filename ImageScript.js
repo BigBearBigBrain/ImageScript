@@ -2,7 +2,6 @@ import png from "./utils/png.js";
 import mem from "./utils/buffer.js";
 import giflib from "./utils/wasm/gif.js";
 import svglib from "./utils/wasm/svg.js";
-// const { version } = require("./package.json");
 import fontlib from "./utils/wasm/font.js";
 import jpeglib from "./utils/wasm/jpeg.js";
 import tifflib from "./utils/wasm/tiff.js";
@@ -1332,7 +1331,7 @@ export class Image {
           creationTime === undefined ? Date.now() : creationTime,
         ).toUTCString(),
         Software: software === undefined
-          ? `github.com/matmen/ImageScript v${version}`
+          ? `github.com/matmen/ImageScript customized by CyborgGrizzly`
           : software,
         Disclaimer: disclaimer,
         Warning: warning,

@@ -1,19 +1,23 @@
-const { version } = require('../../package.json');
+const version = "1.2.16";
 
 let mod = null;
 module.exports = {
   async init() {
     if (!mod) {
-      const streaming = 'compileStreaming' in WebAssembly;
-      mod = await WebAssembly[!streaming ? 'compile' : 'compileStreaming'](await fetch(`https://unpkg.com/imagescript@${version}/wasm/any/gif.wasm`).then(x => streaming ? x : x.arrayBuffer()));
-    };
+      const streaming = "compileStreaming" in WebAssembly;
+      mod = await WebAssembly[!streaming ? "compile" : "compileStreaming"](
+        await fetch(
+          `https://unpkg.com/imagescript@${version}/wasm/any/gif.wasm`,
+        ).then((x) => streaming ? x : x.arrayBuffer()),
+      );
+    }
 
     return this.new();
   },
 
   new() {
-    const streams = new Map;
-    const utf8encoder = new TextEncoder;
+    const streams = new Map();
+    const utf8encoder = new TextEncoder();
 
     const wasm = new WebAssembly.Instance(mod, {
       env: {
@@ -24,11 +28,21 @@ module.exports = {
     }).exports;
 
     class mem {
-      static length() { return wasm.wlen(); }
-      static alloc(size) { return wasm.walloc(size); }
-      static free(ptr, size) { return wasm.wfree(ptr, size); }
-      static u8(ptr, size) { return new Uint8Array(wasm.memory.buffer, ptr, size); }
-      static u32(ptr, size) { return new Uint32Array(wasm.memory.buffer, ptr, size); }
+      static length() {
+        return wasm.wlen();
+      }
+      static alloc(size) {
+        return wasm.walloc(size);
+      }
+      static free(ptr, size) {
+        return wasm.wfree(ptr, size);
+      }
+      static u8(ptr, size) {
+        return new Uint8Array(wasm.memory.buffer, ptr, size);
+      }
+      static u32(ptr, size) {
+        return new Uint32Array(wasm.memory.buffer, ptr, size);
+      }
 
       static copy_and_free(ptr, size) {
         let slice = mem.u8(ptr, size).slice();
@@ -55,7 +69,9 @@ module.exports = {
       u8() {
         this.free();
         let offset = 0;
-        const u8 = new Uint8Array(this.slices.reduce((sum, array) => sum + array.length, 0));
+        const u8 = new Uint8Array(
+          this.slices.reduce((sum, array) => sum + array.length, 0),
+        );
 
         for (const x of this.slices) {
           u8.set(x, offset);
@@ -68,7 +84,18 @@ module.exports = {
       add(x, y, delay, width, height, buffer, dispose, quality) {
         const ptr = mem.alloc(buffer.length);
         mem.u8(ptr, buffer.length).set(buffer);
-        wasm.encoder_add(this.ptr, ptr, buffer.length, x, y, width, height, delay, dispose, quality);
+        wasm.encoder_add(
+          this.ptr,
+          ptr,
+          buffer.length,
+          x,
+          y,
+          width,
+          height,
+          delay,
+          dispose,
+          quality,
+        );
       }
 
       set comment(comment) {
@@ -93,7 +120,7 @@ module.exports = {
         const bptr = mem.alloc(buffer.length);
         mem.u8(bptr, buffer.length).set(buffer);
         this.ptr = wasm.decoder_new(bptr, buffer.length, limit);
-        if (0 === this.ptr) throw new Error('gif: failed to parse gif header');
+        if (0 === this.ptr) throw new Error("gif: failed to parse gif header");
 
         this.width = wasm.decoder_width(this.ptr);
         this.height = wasm.decoder_height(this.ptr);
@@ -112,7 +139,9 @@ module.exports = {
         const ptr = wasm.decoder_frame(this.ptr);
 
         if (1 === ptr) return null;
-        if (0 === ptr) throw (this.free(), new Error('gif: failed to decode frame'));
+        if (0 === ptr) {
+          throw (this.free(), new Error("gif: failed to decode frame"));
+        }
 
         const framebuffer = {
           x: wasm.decoder_frame_x(ptr),
@@ -130,4 +159,4 @@ module.exports = {
 
     return { Encoder, Decoder };
   },
-}
+};

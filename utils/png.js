@@ -1,7 +1,7 @@
 /* global SharedArrayBuffer */
-const mem = require('./buffer.js');
-const crc32 = require('./crc32.js');
-const { compress, decompress } = require('./zlib.js');
+import mem from "./buffer.js";
+import crc32 from "./crc32.js";
+import { compress, decompress } from "./zlib.js";
 
 const __IHDR__ = new Uint8Array([73, 72, 68, 82]);
 const __IDAT__ = new Uint8Array([73, 68, 65, 84]);
@@ -14,7 +14,7 @@ const color_types = {
   TRUECOLOR: 2,
   INDEXED_COLOR: 3,
   GREYSCALE_ALPHA: 4,
-  TRUECOLOR_ALPHA: 6
+  TRUECOLOR_ALPHA: 6,
 };
 
 const channels_to_color_type = {
@@ -22,10 +22,10 @@ const channels_to_color_type = {
   2: color_types.GREYSCALE_ALPHA,
 
   3: color_types.TRUECOLOR,
-  4: color_types.TRUECOLOR_ALPHA
+  4: color_types.TRUECOLOR_ALPHA,
 };
 
-const utf8encoder = new TextEncoder; // replace with latin1 encoder or iext
+const utf8encoder = new TextEncoder(); // replace with latin1 encoder or iext
 
 module.exports = {
   encode(data, { text, width, height, channels, depth = 8, level = 0 }) {
@@ -36,7 +36,7 @@ module.exports = {
 
     while (offset < data.length) {
       tmp[tmp_offset++] = 0;
-      tmp.set(data.subarray(offset, (offset += row_length)), tmp_offset);
+      tmp.set(data.subarray(offset, offset += row_length), tmp_offset);
 
       tmp_offset += row_length;
     }
@@ -59,7 +59,10 @@ module.exports = {
         chunks.push(chunk);
         chunk.set(tb, 9 + kb.length);
         view.setUint32(0, chunk.length - 12);
-        view.setUint32(chunk.length - 4, crc32(chunk.subarray(4, chunk.length - 4)));
+        view.setUint32(
+          chunk.length - 4,
+          crc32(chunk.subarray(4, chunk.length - 4)),
+        );
       }
 
       text = mem.from_parts(chunks);
@@ -90,7 +93,10 @@ module.exports = {
     view.setUint32(45 + offset + compressed.length, 0);
     view.setUint32(53 + offset + compressed.length, __IEND_CRC__);
     view.setUint32(29, crc32(new Uint8Array(array.buffer, 12, 17)));
-    view.setUint32(41 + compressed.length, crc32(new Uint8Array(array.buffer, 37, 4 + compressed.length)));
+    view.setUint32(
+      41 + compressed.length,
+      crc32(new Uint8Array(array.buffer, 37, 4 + compressed.length)),
+    );
 
     return array;
   },
@@ -120,62 +126,92 @@ module.exports = {
 
     let type;
     while ((type = view.getUint32(4 + c_offset)) !== 1229278788) { // IEND
-      if (type === 1229209940) // IDAT
-        chunks.push(array.subarray(8 + c_offset, 8 + c_offset + view.getUint32(c_offset)));
-      else if (type === 1347179589) { // PLTE
-        if (palette)
-          throw new Error('PLTE can only occur once in an image');
+      if (type === 1229209940) { // IDAT
+        chunks.push(
+          array.subarray(8 + c_offset, 8 + c_offset + view.getUint32(c_offset)),
+        );
+      } else if (type === 1347179589) { // PLTE
+        if (palette) {
+          throw new Error("PLTE can only occur once in an image");
+        }
         palette = new Uint32Array(view.getUint32(c_offset));
-        for (let pxlOffset = 0; pxlOffset < palette.length * 8; pxlOffset += 3)
-          palette[pxlOffset / 3] = array[8 + c_offset + pxlOffset] << 24 | array[8 + c_offset + pxlOffset + 1] << 16 | array[8 + c_offset + pxlOffset + 2] << 8 | 0xff;
+        for (
+          let pxlOffset = 0;
+          pxlOffset < palette.length * 8;
+          pxlOffset += 3
+        ) {
+          palette[pxlOffset / 3] = array[8 + c_offset + pxlOffset] << 24 |
+            array[8 + c_offset + pxlOffset + 1] << 16 |
+            array[8 + c_offset + pxlOffset + 2] << 8 | 0xff;
+        }
       } else if (type === 1951551059) { // tRNS
-        if (alphaPalette)
-          throw new Error('tRNS can only occur once in an image');
+        if (alphaPalette) {
+          throw new Error("tRNS can only occur once in an image");
+        }
         alphaPalette = new Uint8Array(view.getUint32(c_offset));
-        for (let i = 0; i < alphaPalette.length; i++)
+        for (let i = 0; i < alphaPalette.length; i++) {
           alphaPalette[i] = array[8 + c_offset + i];
+        }
       }
 
       c_offset += 4 + 4 + 4 + view.getUint32(c_offset);
-      if (c_offset > maxSearchOffset) // missing IEND
+      if (c_offset > maxSearchOffset) { // missing IEND
         break;
+      }
     }
 
-    array = decompress(chunks.length === 1 ? chunks[0] : mem.from_parts(chunks), height + height * row_length);
+    array = decompress(
+      chunks.length === 1 ? chunks[0] : mem.from_parts(chunks),
+      height + height * row_length,
+    );
 
     while (offset < array.byteLength) {
       const filter = array[offset++];
       const slice = array.subarray(offset, offset += row_length);
 
       if (0 === filter) pixels.set(slice, p_offset);
-      else if (1 === filter) this.filter_1(slice, pixels, p_offset, bytespp, row_length);
-      else if (2 === filter) this.filter_2(slice, pixels, p_offset, bytespp, row_length);
-      else if (3 === filter) this.filter_3(slice, pixels, p_offset, bytespp, row_length);
-      else if (4 === filter) this.filter_4(slice, pixels, p_offset, bytespp, row_length);
+      else if (1 === filter) {
+        this.filter_1(slice, pixels, p_offset, bytespp, row_length);
+      } else if (2 === filter) {
+        this.filter_2(slice, pixels, p_offset, bytespp, row_length);
+      } else if (3 === filter) {
+        this.filter_3(slice, pixels, p_offset, bytespp, row_length);
+      } else if (4 === filter) {
+        this.filter_4(slice, pixels, p_offset, bytespp, row_length);
+      }
 
       p_offset += row_length;
     }
 
     if (pixel_type === 3) {
-      if (!palette)
-        throw new Error('Indexed color PNG has no PLTE');
+      if (!palette) {
+        throw new Error("Indexed color PNG has no PLTE");
+      }
 
-      if (alphaPalette)
-        for (let i = 0; i < alphaPalette.length; i++)
+      if (alphaPalette) {
+        for (let i = 0; i < alphaPalette.length; i++) {
           palette[i] &= 0xffffff00 | alphaPalette[i];
+        }
+      }
 
       channels = 4;
       const newPixels = new Uint8Array(width * height * 4);
-      const pixelView = new DataView(newPixels.buffer, newPixels.byteOffset, newPixels.byteLength);
-      for (let i = 0; i < pixels.length; i++)
+      const pixelView = new DataView(
+        newPixels.buffer,
+        newPixels.byteOffset,
+        newPixels.byteLength,
+      );
+      for (let i = 0; i < pixels.length; i++) {
         pixelView.setUint32(i * 4, palette[pixels[i]], false);
+      }
       pixels = newPixels;
     }
 
     if (bpc !== 8) {
       const newPixels = new Uint8Array(pixels.length / bpc * 8);
-      for (let i = 0; i < pixels.length; i += 2)
+      for (let i = 0; i < pixels.length; i += 2) {
         newPixels[i / 2] = pixels[i];
+      }
       pixels = newPixels;
     }
 
@@ -186,17 +222,26 @@ module.exports = {
       if (channels === 1) {
         for (let i = 0; i < width * height; i++) {
           const pixel = pixels[i];
-          view.setUint32(i * 4, pixel << 24 | pixel << 16 | pixel << 8 | 0xff, false);
+          view.setUint32(
+            i * 4,
+            pixel << 24 | pixel << 16 | pixel << 8 | 0xff,
+            false,
+          );
         }
       } else if (channels === 2) {
         for (let i = 0; i < width * height * 2; i += 2) {
           const pixel = pixels[i];
-          view.setUint32(i * 2, pixel << 24 | pixel << 16 | pixel << 8 | pixels[i + 1], false);
+          view.setUint32(
+            i * 2,
+            pixel << 24 | pixel << 16 | pixel << 8 | pixels[i + 1],
+            false,
+          );
         }
       } else if (channels === 3) {
         newPixels.fill(0xff);
-        for (let i = 0; i < width * height; i++)
+        for (let i = 0; i < width * height; i++) {
           newPixels.set(pixels.subarray(i * 3, i * 3 + 3), i * 4);
+        }
       }
 
       pixels = newPixels;
@@ -208,14 +253,18 @@ module.exports = {
   filter_1(slice, pixels, p_offset, bytespp, row_length) {
     let i = 0;
     while (i < bytespp) pixels[i + p_offset] = slice[i++];
-    while (i < row_length) pixels[i + p_offset] = slice[i] + pixels[i++ + p_offset - bytespp];
+    while (i < row_length) {
+      pixels[i + p_offset] = slice[i] + pixels[i++ + p_offset - bytespp];
+    }
   },
 
   filter_2(slice, pixels, p_offset, bytespp, row_length) {
     if (0 === p_offset) pixels.set(slice, p_offset);
     else {
       let i = 0;
-      while (i < row_length) pixels[i + p_offset] = slice[i] + pixels[i++ + p_offset - row_length];
+      while (i < row_length) {
+        pixels[i + p_offset] = slice[i] + pixels[i++ + p_offset - row_length];
+      }
     }
   },
 
@@ -224,10 +273,19 @@ module.exports = {
 
     if (0 === p_offset) {
       while (i < bytespp) pixels[i] = slice[i++];
-      while (i < row_length) pixels[i] = slice[i] + (pixels[i++ - bytespp] >> 1);
+      while (i < row_length) {
+        pixels[i] = slice[i] + (pixels[i++ - bytespp] >> 1);
+      }
     } else {
-      while (i < bytespp) pixels[i + p_offset] = slice[i] + (pixels[i++ + p_offset - row_length] >> 1);
-      while (i < row_length) pixels[i + p_offset] = slice[i] + (pixels[i + p_offset - bytespp] + pixels[i++ + p_offset - row_length] >> 1);
+      while (i < bytespp) {
+        pixels[i + p_offset] = slice[i] +
+          (pixels[i++ + p_offset - row_length] >> 1);
+      }
+      while (i < row_length) {
+        pixels[i + p_offset] = slice[i] +
+          (pixels[i + p_offset - bytespp] +
+              pixels[i++ + p_offset - row_length] >> 1);
+      }
     }
   },
 
@@ -238,7 +296,9 @@ module.exports = {
       while (i < bytespp) pixels[i] = slice[i++];
       while (i < row_length) pixels[i] = slice[i] + pixels[i++ - bytespp];
     } else {
-      while (i < bytespp) pixels[i + p_offset] = slice[i] + pixels[i++ + p_offset - row_length];
+      while (i < bytespp) {
+        pixels[i + p_offset] = slice[i] + pixels[i++ + p_offset - row_length];
+      }
 
       while (i < row_length) {
         const a = pixels[i + p_offset - bytespp];
@@ -250,8 +310,9 @@ module.exports = {
         const pb = Math.abs(p - b);
         const pc = Math.abs(p - c);
 
-        pixels[i + p_offset] = slice[i++] + ((pa <= pb && pa <= pc) ? a : ((pb <= pc) ? b : c));
+        pixels[i + p_offset] = slice[i++] +
+          ((pa <= pb && pa <= pc) ? a : ((pb <= pc) ? b : c));
       }
     }
-  }
+  },
 };

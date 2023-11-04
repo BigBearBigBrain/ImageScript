@@ -1,7 +1,7 @@
 const version = "1.2.16";
 
 let mod = null;
-module.exports = {
+export default {
   async init() {
     if (!mod) {
       const streaming = "compileStreaming" in WebAssembly;

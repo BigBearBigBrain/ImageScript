@@ -27,7 +27,7 @@ const channels_to_color_type = {
 
 const utf8encoder = new TextEncoder(); // replace with latin1 encoder or iext
 
-module.exports = {
+export default {
   encode(data, { text, width, height, channels, depth = 8, level = 0 }) {
     let offset = 0;
     let tmp_offset = 0;

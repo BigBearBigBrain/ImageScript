@@ -1,4 +1,4 @@
-const { view } = require("../util/mem.js");
+import { view } from "../util/mem.mjs";
 
 const formats = {
   ttf: { type: "font", format: "ttf" },

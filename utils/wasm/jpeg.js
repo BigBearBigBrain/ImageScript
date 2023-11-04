@@ -1,4 +1,4 @@
-const { version } = require("../../package.json");
+const version = "1.2.16";
 
 let mod = null;
 export default {
